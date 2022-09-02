@@ -1,0 +1,8 @@
+zarr
+fsspec
+xarray
+cdsapi
+jpeg-xl-float-with-nans
+numcodecs
+huggingface_hub
+datasets
