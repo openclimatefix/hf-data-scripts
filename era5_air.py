@@ -64,20 +64,19 @@ for year in range(2022,2015,-1):
                 data = xr.open_dataset("/home/jacob/Downloads/download_air.nc", engine="netcdf4")
                 print(data)
                 encoding = {var: {"compressor": numcodecs.get_codec(dict(id="zlib", level=5))} for var in data.data_vars}
-                for i in range(24):
-                    if f"data/air/{year}/{str(month).zfill(2)}/{year}_{str(month).zfill(2)}_{str(day).zfill(2)}_{str(i).zfill(2)}.zarr.zip" in data_files:
-                        continue
-                    d = data.chunk({"time": 1})
-                    with zarr.ZipStore(f'/run/media/jacob/Elements/{year}_{str(month).zfill(2)}_{str(day).zfill(2)}.zarr.zip', mode='w') as store:
-                        d.to_zarr(store, encoding=encoding, compute=True)
-                    api.upload_file(
-                        path_or_fileobj=f'/run/media/jacob/Elements/{year}_{str(month).zfill(2)}_{str(day).zfill(2)}.zarr.zip',
-                        path_in_repo=f"data/air/{year}/{str(month).zfill(2)}/{year}{str(month).zfill(2)}{str(day).zfill(2)}.zarr.zip",
-                        repo_id="openclimatefix/era5",
-                        repo_type="dataset",
-                        )
-                    os.remove(
-                        f'/run/media/jacob/Elements/{year}_{str(month).zfill(2)}_{str(day).zfill(2)}.zarr.zip')
+                if f"data/air/{year}/{str(month).zfill(2)}/{year}_{str(month).zfill(2)}_{str(day).zfill(2)}_{str(i).zfill(2)}.zarr.zip" in data_files:
+                    continue
+                d = data.chunk({"time": 1})
+                with zarr.ZipStore(f'/run/media/jacob/Elements/{year}_{str(month).zfill(2)}_{str(day).zfill(2)}.zarr.zip', mode='w') as store:
+                    d.to_zarr(store, encoding=encoding, compute=True)
+                api.upload_file(
+                    path_or_fileobj=f'/run/media/jacob/Elements/{year}_{str(month).zfill(2)}_{str(day).zfill(2)}.zarr.zip',
+                    path_in_repo=f"data/air/{year}/{str(month).zfill(2)}/{year}{str(month).zfill(2)}{str(day).zfill(2)}.zarr.zip",
+                    repo_id="openclimatefix/era5-reanalysis",
+                    repo_type="dataset",
+                    )
+                os.remove(
+                    f'/run/media/jacob/Elements/{year}_{str(month).zfill(2)}_{str(day).zfill(2)}.zarr.zip')
             except:
                 continue
 
