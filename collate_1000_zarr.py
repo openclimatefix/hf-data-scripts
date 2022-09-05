@@ -4,9 +4,11 @@ import dask
 import zarr
 import numpy as np
 import xarray as xr
+xr.set_options()
 from satip.jpeg_xl_float_with_nans import JpegXlFloatWithNaNs
 
 def preprocess_function(xr_data: xr.Dataset) -> xr.Dataset:
+    attrs = xr_data.attrs
     y_coords = xr_data.coords["y_geostationary"].values
     x_coords  = xr_data.coords["x_geostationary"].values
     x_dataarray = xr.DataArray(data=np.expand_dims(xr_data.coords["x_geostationary"].values, axis=0),
@@ -17,6 +19,7 @@ def preprocess_function(xr_data: xr.Dataset) -> xr.Dataset:
                                coords=dict(time=xr_data.coords["time"].values, y_geostationary=y_coords))
     xr_data["x_geostationary_coordinates"] = x_dataarray
     xr_data["y_geostationary_coordinates"] = y_dataarray
+    xr_data.attrs = attrs
     return xr_data
 
 if __name__ == "__main__":

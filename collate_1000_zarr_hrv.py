@@ -1,11 +1,13 @@
 import logging
 
+import zarr
 import dask
 import numpy as np
 import xarray as xr
 from satip.jpeg_xl_float_with_nans import JpegXlFloatWithNaNs
 
 def preprocess_function(xr_data: xr.Dataset) -> xr.Dataset:
+    attrs = xr_data.attrs
     y_coords = xr_data.coords["y_geostationary"].values
     x_coords  = xr_data.coords["x_geostationary"].values
     x_dataarray = xr.DataArray(data=np.expand_dims(xr_data.coords["x_geostationary"].values, axis=0),
@@ -16,6 +18,7 @@ def preprocess_function(xr_data: xr.Dataset) -> xr.Dataset:
                                coords=dict(time=xr_data.coords["time"].values, y_geostationary=y_coords))
     xr_data["x_geostationary_coordinates"] = x_dataarray
     xr_data["y_geostationary_coordinates"] = y_dataarray
+    xr_data.attrs = attrs
     return xr_data
 
 if __name__ == "__main__":
@@ -69,5 +72,8 @@ if __name__ == "__main__":
                 },
             }
             extra_kwargs = hrv_zarr_mode_to_extra_kwargs["w"]
-            dataset.to_zarr(f"/mnt/storage_ssd_4tb/1000_zarrs/hrv_{year}_{str(i).zfill(6)}-of-{str(chunks).zfill(6)}.zarr", compute=True, **extra_kwargs, consolidated=True)
+            with zarr.ZipStore(
+                    f"/mnt/storage_ssd_4tb/1000_zarrs/hrv_{year}_{str(i).zfill(6)}-of-{str(chunks).zfill(6)}.zarr.zip",
+                    mode="w") as store:
+                dataset.to_zarr(store, compute=True, **extra_kwargs, consolidated=True)
 
