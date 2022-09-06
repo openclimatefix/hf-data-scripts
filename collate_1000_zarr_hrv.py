@@ -44,6 +44,8 @@ if __name__ == "__main__":
             continue
         chunks = len(hrv_data_files) // 1000
         for i in range(chunks):
+            if os.path.exists(f"/mnt/storage_ssd_4tb/1000_zarrs/hrv_{year}_{str(i).zfill(6)}-of-{str(chunks).zfill(6)}.zarr.zip"):
+                continue
             dataset = xr.open_mfdataset(
                 hrv_data_files[i*1000:(i+1)*1000],
                 chunks="auto",  # See issue #456 for why we use "auto".
@@ -76,4 +78,5 @@ if __name__ == "__main__":
                     f"/mnt/storage_ssd_4tb/1000_zarrs/hrv_{year}_{str(i).zfill(6)}-of-{str(chunks).zfill(6)}.zarr.zip",
                     mode="w") as store:
                 dataset.to_zarr(store, compute=True, **extra_kwargs, consolidated=True)
+            dataset.close()
 
