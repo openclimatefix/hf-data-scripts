@@ -44,19 +44,33 @@ if __name__ == "__main__":
         if len(data_files) == 0 or len(hrv_data_files) == 0:
             continue
         chunks = len(data_files) // 1000
-        for i in range(chunks):
+        for i in range(chunks+1):
             if os.path.exists(f"/mnt/storage_ssd_4tb/1000_zarrs/{year}_{str(i).zfill(6)}-of-{str(chunks).zfill(6)}.zarr.zip"):
                 continue
-            dataset = xr.open_mfdataset(
-                data_files[i*1000:(i+1)*1000],
-                chunks="auto",  # See issue #456 for why we use "auto".
-                mode="r",
-                engine="zarr",
-                concat_dim="time",
-                consolidated=True,
-                preprocess=preprocess_function,
-                combine="nested",
-            ).chunk({"time": 1,  "x_geostationary": int(3712/4), "y_geostationary": 1392, "variable": 1})
+            try:
+                dataset = xr.open_mfdataset(
+                    data_files[i*1000:(i+1)*1000],
+                    chunks="auto",  # See issue #456 for why we use "auto".
+                    mode="r",
+                    engine="zarr",
+                    concat_dim="time",
+                    consolidated=True,
+                    preprocess=preprocess_function,
+                    combine="nested",
+                ).chunk({"time": 1,  "x_geostationary": int(3712/4), "y_geostationary": 1392, "variable": 1})
+            except OSError:
+                import time
+                time.sleep(5)
+                dataset = xr.open_mfdataset(
+                    data_files[i * 1000:(i + 1) * 1000],
+                    chunks="auto",  # See issue #456 for why we use "auto".
+                    mode="r",
+                    engine="zarr",
+                    concat_dim="time",
+                    consolidated=True,
+                    preprocess=preprocess_function,
+                    combine="nested",
+                ).chunk({"time": 1, "x_geostationary": int(3712 / 4), "y_geostationary": 1392, "variable": 1})
             #dataset = xr.open_mfdataset(hrv_data_files[i*1000:(i+1)*1000], engine="zarr")
             print(dataset)
             compression_algos = {
