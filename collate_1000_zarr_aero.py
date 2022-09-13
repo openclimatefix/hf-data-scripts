@@ -36,7 +36,7 @@ if __name__ == "__main__":
 
     dask.config.set(**{"array.slicing.split_large_chunks": False})
     warnings.filterwarnings("ignore", category=RuntimeWarning)
-    years = list(range(2018, 2013, -1))
+    years = list(range(2022, 2018, -1))
     random.shuffle(years)
     api = HfApi()
     files = api.list_repo_files("openclimatefix/eumetsat-rss", repo_type="dataset")
@@ -44,9 +44,9 @@ if __name__ == "__main__":
     for year in years:
         pattern = f"{year}"
         # Get all files for a month, and use that as the name for the empty one, zip up at end and download
-        data_files = sorted(list(glob.glob(os.path.join("/mnt/storage_ssd_4tb/EUMETSAT_Zarr/", f"{pattern}*.zarr.zip"))))
+        data_files = sorted(list(glob.glob(os.path.join("/run/media/jacob/SSD2/modal/", f"{pattern}*.zarr.zip"))))
         print(len(data_files))
-        hrv_data_files = sorted(list(glob.glob(os.path.join("/mnt/storage_ssd_4tb/EUMETSAT_Zarr/", f"hrv_{pattern}*.zarr.zip"))))
+        hrv_data_files = sorted(list(glob.glob(os.path.join("/run/media/jacob/SSD2/modal/", f"hrv_{pattern}*.zarr.zip"))))
         print(len(hrv_data_files))
         if len(data_files) == 0 or len(hrv_data_files) == 0:
             continue
@@ -60,7 +60,7 @@ if __name__ == "__main__":
             shard_path_in_repo = f"data/{year}/nonhrv/{year}_{str(i).zfill(6)}-of-{str(chunks).zfill(6)}.zarr.zip"
             if shard_path_in_repo in hf_files:
                 continue
-            if os.path.exists(f"/mnt/storage_ssd_4tb/1000_zarrs/{year}_{str(i).zfill(6)}-of-{str(chunks).zfill(6)}.zarr.zip"):
+            if os.path.exists(f"/run/media/jacob/data/1000_zarrs/{year}_{str(i).zfill(6)}-of-{str(chunks).zfill(6)}.zarr.zip"):
                 continue
             try:
                 dataset = xr.open_mfdataset(
@@ -104,7 +104,7 @@ if __name__ == "__main__":
                 },
             }
             extra_kwargs = hrv_zarr_mode_to_extra_kwargs["w"]
-            out_filename = f"/mnt/storage_ssd_4tb/1000_zarrs/{year}_{str(i).zfill(6)}-of-{str(chunks).zfill(6)}.zarr.zip"
+            out_filename = f"/run/media/jacob/data/1000_zarrs/{year}_{str(i).zfill(6)}-of-{str(chunks).zfill(6)}.zarr.zip"
             with zarr.ZipStore(
                     out_filename,
                     mode="w") as store:

@@ -30,10 +30,18 @@ if __name__ == "__main__":
 
     import warnings
     import dask
+    import random
+    from huggingface_hub import HfApi
 
     dask.config.set(**{"array.slicing.split_large_chunks": False})
     warnings.filterwarnings("ignore", category=RuntimeWarning)
-    for year in range(2018,2013, -1):
+    years = list(range(2018,2013, -1))
+    random.shuffle(years)
+    api = HfApi()
+    files = api.list_repo_files("openclimatefix/eumetsat-rss", repo_type="dataset")
+    hf_files = [file for file in files if file.startswith("data/")]
+
+    for year in years:
         pattern = f"{year}"
         # Get all files for a month, and use that as the name for the empty one, zip up at end and download
         data_files = sorted(list(glob.glob(os.path.join("/mnt/storage_ssd_4tb/EUMETSAT_Zarr/", f"{pattern}*.zarr.zip"))))
@@ -43,7 +51,14 @@ if __name__ == "__main__":
         if len(data_files) == 0 or len(hrv_data_files) == 0:
             continue
         chunks = len(hrv_data_files) // 1000
-        for i in range(chunks+1):
+        shards = list(range(chunks + 1))
+        random.shuffle(shards)
+        for i in shards:
+            files = api.list_repo_files("openclimatefix/eumetsat-rss", repo_type="dataset")
+            hf_files = [file for file in files if file.startswith(f"data/{year}/hrv/")]
+            shard_path_in_repo = f"data/{year}/hrv/{year}_{str(i).zfill(6)}-of-{str(chunks).zfill(6)}.zarr.zip"
+            if shard_path_in_repo in hf_files:
+                continue
             if os.path.exists(f"/mnt/storage_ssd_4tb/1000_zarrs/hrv_{year}_{str(i).zfill(6)}-of-{str(chunks).zfill(6)}.zarr.zip"):
                 continue
             try:
@@ -88,10 +103,26 @@ if __name__ == "__main__":
                 },
             }
             extra_kwargs = hrv_zarr_mode_to_extra_kwargs["w"]
+            out_filename = f"/mnt/storage_ssd_4tb/1000_zarrs/hrv_{year}_{str(i).zfill(6)}-of-{str(chunks).zfill(6)}.zarr.zip"
             with zarr.ZipStore(
-                    f"/mnt/storage_ssd_4tb/1000_zarrs/hrv_{year}_{str(i).zfill(6)}-of-{str(chunks).zfill(6)}.zarr.zip",
+                    out_filename,
                     mode="w") as store:
                 dataset.to_zarr(store, compute=True, **extra_kwargs, consolidated=True)
             dataset.close()
             del dataset
+            shard_path_in_repo = f"data/{year}/hrv/{year}_{str(i).zfill(6)}-of-{str(chunks).zfill(6)}.zarr.zip"
+            if shard_path_in_repo in hf_files:
+                print(f"Skipping: {shard_path_in_repo}")
+                os.remove(str(out_filename))
+                continue
+            try:
+                api.upload_file(path_or_fileobj=out_filename,
+                                path_in_repo=shard_path_in_repo,
+                                repo_id="openclimatefix/eumetsat-rss",
+                                repo_type="dataset",
+                                )
+                os.remove(str(out_filename))
+            except Exception as e:
+                print(e)
+                continue
 
