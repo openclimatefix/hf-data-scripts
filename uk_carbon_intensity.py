@@ -63,5 +63,19 @@ ds: xr.Dataset = xr.Dataset(
 )
 assert dict(ds.coords.dtypes) == {"time": np.dtype("<M8[ns]")}
 
+# Add more metadata to the xarray.Dataset
+# See https://carbon-intensity.github.io/api-definitions/#intensity-1
+ds["forecast"].attrs = dict(
+    description="The forecast Carbon Intensity for the half hour in units gCO2/kWh."
+)
+ds["actual"].attrs = dict(
+    description="The estimated actual Carbon Intensity for the half hour in units gCO2/kWh."
+)
+ds["intensity_index"].attrs = dict(
+    description="The index is a measure of the Carbon Intensity represented on a scale "
+    "between 'very low', 'low', 'moderate', 'high', 'very high'."
+)
+
+
 # Save to Zarr format
 ds.to_zarr(store="uk_national_carbon_intensity.zarr", consolidated=True)
