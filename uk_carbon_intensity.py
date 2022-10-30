@@ -13,12 +13,21 @@ import xarray as xr
 
 # %%
 # Temporal date range
-start_date: str = "2022-09-01T00:00:00.000Z"
-end_date: str = "2022-09-30T00:00:00.000Z"
-
+start_year: str = "2020"
+end_year: str = "2022"
 
 # %%
-# Retrieve UK National carbon density data in JSON format from API.
+# Retrieve UK National carbon density data in JSON format from API
+# Each API call is limited to 31 days so we build a list of URLs for each month
+api_urls: list = []
+for start_date in pd.date_range(start=start_year, end=end_year, freq="MS"):
+    # Start date like 2020-02-01T00:00:00, end date like 2020-02-28T00:00:00
+    end_date = start_date + pd.offsets.MonthEnd()
+    api_urls.append(
+        f"https://api.carbonintensity.org.uk/intensity/{start_date.isoformat()}Z/{end_date.isoformat()}Z"
+    )
+
+# Parse JSON from API call, concat data from every month into one dataframe
 # Example JSON:
 # {
 #     "data": [
@@ -29,10 +38,11 @@ end_date: str = "2022-09-30T00:00:00.000Z"
 #         }
 #     ]
 # }
-df: pd.DataFrame = pd.read_json(
-    path_or_buf=f"https://api.carbonintensity.org.uk/intensity/{start_date}/{end_date}",
-    orient="split",
-    convert_dates=["from", "to"],
+df: pd.DataFrame = pd.concat(
+    objs=[
+        pd.read_json(path_or_buf=api_url, orient="split", convert_dates=["from", "to"])
+        for api_url in api_urls
+    ]
 )
 assert list(df.columns) == ["from", "to", "intensity"]
 assert list(df.dtypes) == [
@@ -44,7 +54,7 @@ assert list(df.dtypes) == [
 # Split intensity column (dictionary format) into forecast, actual and index values
 df_intensity: pd.DataFrame = pd.json_normalize(data=df.intensity)
 assert list(df_intensity.columns) == ["forecast", "actual", "index"]
-assert list(df_intensity.dtypes) == [np.int64, np.int64, np.object_]
+assert list(df_intensity.dtypes) == [np.int64, np.float64, np.object_]
 
 # Create dataset by joining from/to dates with forecast/actual/index carbon intensity
 time_coords: pd.Series = df["from"]  # use start date as index coordinate
