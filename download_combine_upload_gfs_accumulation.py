@@ -25,11 +25,13 @@ from huggingface_hub import HfApi
 api = HfApi()
 files = api.list_repo_files("openclimatefix/gfs-reforecast", repo_type="dataset")
 data_files = [file for file in files if file.startswith("data/forecasts/GFSv16_accum/")]
-for year in [2021, 2022]:
+for year in [2022, 2021]:
     for month in range(1,13):
         for day in range(1,32):
             for hour in [0,6,12,18]:
                 f = f"/run/media/jacob/7214E0FE36731680/{year}{str(month).zfill(2)}{str(day).zfill(2)}{str(hour).zfill(2)}.zarr.zip"
+                if os.path.exists(f):
+                    continue
                 shard_path_in_repo = str(f).split("gfs-reforecast/")[-1]  # Now path from root
                 times = shard_path_in_repo.split("/")[-1].split(".")[0]
                 year = times[:4]
@@ -62,12 +64,23 @@ for year in [2021, 2022]:
                         continue
                     download_filelist.append(os.path.join(f"/run/media/jacob/7214E0FE36731680/GFS_025/", file_base))
                 #try:
+                if len(download_filelist) != 4:
+                    for f in download_filelist:
+                        try:
+                            os.remove(f)
+                        except:
+                            continue
+                    download_filelist = []
+                    filelist = []
+                    continue
                 print(download_filelist)
                 tmpl = pywgrib2_xr.make_template(download_filelist)
                 dataset = pywgrib2_xr.open_dataset(download_filelist, tmpl)
                 #times_to_drop = [time_var for time_var in dataset.dims if
                 #                   "time" in time_var and len(dataset[time_var]) != 3]
                 #dataset = dataset.drop_dims(times_to_drop)
+                vars_to_drop = [data_var for data_var in dataset.data_vars if "surface" not in data_var]
+                dataset = dataset.drop_vars(vars_to_drop)
                 time_to_rename = {[time_var for time_var in dataset.dims if "time" in time_var and len(dataset[time_var]) == len(download_filelist)][0]: "time"}
                 dataset = dataset.rename(time_to_rename)
                 # Rename the super long PV ones
@@ -95,6 +108,8 @@ for year in [2021, 2022]:
                         continue
                 #except:
                 #    continue
+                download_filelist = []
+                filelist = []
                 continue
 
                 import os
